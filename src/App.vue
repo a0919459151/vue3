@@ -18,7 +18,7 @@ const submitstockSymbolArray = async () => {
   }
 
   const res = await Promise.all(
-    stockSymbolArray.value.map((stock) => axios.get(`http://127.0.0.1:3000/stockData/${stock}`))
+    stockSymbolArray.value.map((stock) => axios.get(`http://34.81.171.1:3000/stockData/${stock}`))
   )
   const resData = res.map((element) => element.data)
   stockData.value = resData

@@ -4,41 +4,76 @@ import { ref } from "vue";
 
 const stockData = ref([])  // for caching response object
 
-// input 
+// input
 const stock = ref('')
 const stockSymbolArray = ref([])
 const stockTemp = ref([])
+
 const addStockDialogVisible = ref(false)
 const tableHeaderArray = ref(["股價", "漲跌", "漲跌幅(%)", "委買價", "委賣價", "開盤", "昨收", "最高", "最低", "成交量(張)", "更新時間"])
 const alertString = ref('')
+
+// temp add to stockSymbolArray & call api
 const submitstockSymbolArray = async () => {
-  if (stockTemp.value) {
-    stockSymbolArray.value = stockSymbolArray.value.concat(stockTemp.value)
-    stockTemp.value = []
-  }
+  const result = stockTemp.value.map((element => element.stockSymbol))
+  stockSymbolArray.value = stockSymbolArray.value.concat(result)
+  stockTemp.value = []
 
   const res = await Promise.all(
-    stockSymbolArray.value.map((stock) => axios.get(`http://34.81.171.1:3000/stockData/${stock}`))
+    stockSymbolArray.value.map((element) => axios.get(`http://localhost:3000/stockData/${element}`))
   )
   const resData = res.map((element) => element.data)
   stockData.value = resData
 }
 
-const addStockToTemp = () => {
-  stock.value = stock.value.toUpperCase()
-  if (stock.value) {
-    if (stockIsExist()) {
-      alertString.value = 'Stock is exist!'
+const resTemp = []
+const addStockToTemp = async () => {
+  let res
+  const regexIsNumber = /\d/g
 
-    } else {
-      stockTemp.value.push(stock.value)
-    }
+  if (!stock.value) return
+
+  if (stockIsExist()) {
+    alertString.value = 'Stock is exist!'
     stock.value = ""
+    return
   }
+
+  if (regexIsNumber.test(stock.value)) { // 判斷為輸入為 stockSymbol
+    res = await getstockNameByStockSymbol()
+    res = res.data
+    stock.value = res.stockSymbol
+  } else { // 判斷為輸入為 stockName
+    res = await getstockSymbolByStockName()
+    res = res.data
+    stock.value = res.stockSymbol
+  }
+
+  if (!stock.value) {
+    alertString.value = 'No stock data!'
+    stock.value = ""
+    return
+  }
+
+  resTemp.push(res.stockSymbol)
+  stockTemp.value.push(res)
+  stock.value = ''
+  alertString.value = ''
+
 
   function stockIsExist() {
-    return stockSymbolArray.value.includes(stock.value) || stockTemp.value.includes(stock.value)
+    return stockSymbolArray.value.includes(stock.value) || resTemp.includes(stock.value)
   }
+  async function getstockSymbolByStockName() {
+    return await axios.get(`http://localhost:3000/getOneBystockName/${stock.value}`)
+  }
+  async function getstockNameByStockSymbol() {
+    return await axios.get(`http://localhost:3000/getOneByStockSymbol/${stock.value.toUpperCase()}`)
+  }
+}
+
+const removeFromTemp = (stock) => {
+  stockTemp.value.splice(stockTemp.value.indexOf(stock), 1)
 }
 
 const removeStockTemp = () => {
@@ -56,10 +91,10 @@ const removeStockTemp = () => {
     </div>
   </header>
 
-  <main class="opacity">
+  <main>
     <div class="stockPicking w1260">
-      <button class="but" @click="addStockDialogVisible = true">新增選股</button>
-      <button class="but" @click="submitstockSymbolArray()">刷新</button>
+      <button class="btn" @click="addStockDialogVisible = true, alertString = ''">新增選股</button>
+      <button class="btn" @click="submitstockSymbolArray()">刷新</button>
 
       <div class="table">
 
@@ -101,7 +136,7 @@ const removeStockTemp = () => {
                   </svg>
                 </span>
               </div>
-              <p>{{ item.stockName }}</p>
+              {{ item.stockName }}
             </div>
             <div class="tableCell" v-for="col in item.info">
               {{ col }}
@@ -117,7 +152,7 @@ const removeStockTemp = () => {
   <Transition name="bounce">
 
     <div class="addStockDialogContainer" v-if="addStockDialogVisible">
-      <div class="overlay" @click="addStockDialogVisible = false, removeStockTemp()"></div>
+      <div class="overlay" @click="addStockDialogVisible = false, submitstockSymbolArray(), removeStockTemp()"></div>
 
       <div class="addStockDialog">
         <h3>新增股票</h3>
@@ -129,16 +164,17 @@ const removeStockTemp = () => {
                 d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
             </svg>
           </div>
-          <input class="input" type="text" placeholder="請輸入股票代碼 <Enter>" v-model="stock" @keyup.enter="addStockToTemp()" @click="alertString = ''">
+          <input class="input" type="text" placeholder="請輸入股票代碼 + <Enter>" v-model="stock"
+            @keyup.enter="addStockToTemp()" @click="alertString = ''">
         </div>
         <ul style="width: 80%;">
-          <li class="li" v-for="stock in stockTemp">
+          <li class="li" v-for="{ stockName, stockSymbol } in stockTemp">
             <div>
-              <p>{{ stock }}</p>
+              <p>{{ stockName }}</p>
+              <p style="color: #979ba7">{{ stockSymbol }}.TW</p>
             </div>
             <div>
-              <svg class="Cur(p)" width="22" height="22" viewBox="0 0 24 24" data-icon="star-filled"
-                style="fill: rgb(250, 220, 0); stroke: rgb(0, 0, 0); stroke-width: 1; vertical-align: bottom;">
+              <svg class="star" viewBox="0 0 24 24" @click="removeFromTemp(stock)">
                 <path
                   d="M22.954 8.952c-.126-.39-.49-.652-.9-.652H15.06L12.9 1.652C12.772 1.262 12.41 1 12 1s-.772.263-.898.652L8.94 8.3H1.945c-.41 0-.772.263-.898.652-.127.39.012.815.343 1.056l5.66 4.108-2.163 6.648c-.126.39.012.815.344 1.055.332.24.78.24 1.112 0L12 17.71l5.66 4.11c.165.12.36.18.555.18.194 0 .39-.06.555-.18.33-.24.47-.667.343-1.056l-2.16-6.648 5.658-4.108c.332-.24.47-.667.344-1.056z">
                 </path>
@@ -146,7 +182,6 @@ const removeStockTemp = () => {
             </div>
           </li>
         </ul>
-        <button class="dialogSubmit" @click="addStockDialogVisible = false, submitstockSymbolArray()">送出</button>
       </div>
     </div>
   </Transition>
@@ -158,6 +193,14 @@ const removeStockTemp = () => {
 * {
   margin: 0;
   padding: 0;
+}
+
+svg.star {
+  width: 22px;
+  height: 22px;
+  fill: yellow;
+  stroke: black;
+  stroke-width: 1;
 }
 
 .overlay {
@@ -178,8 +221,8 @@ const removeStockTemp = () => {
   position: absolute;
   background-color: blanchedalmond;
   width: 350px;
-  min-height: 400px;
-  top: 150px;
+  min-height: 50%;
+  top: 10%;
   left: 50%;
   transform: translate(-50%, 0);
   border-radius: 20px;
@@ -208,7 +251,6 @@ const removeStockTemp = () => {
     transform: scale(1);
   }
 }
-
 
 .inputWrapper {
   margin-top: 5px;
@@ -245,10 +287,11 @@ const removeStockTemp = () => {
   list-style: none;
   margin: 5px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
 }
 
-.but {
+.btn {
   background-color: lightblue;
   margin: 10px;
   font-size: 14px;
@@ -256,27 +299,25 @@ const removeStockTemp = () => {
   border-radius: 4px;
 }
 
-.but:hover {
+.btn:hover {
   color: white;
   background-color: blueviolet;
 }
 
-.dialogSubmit {
+.diologBtn {
   background-color: lightgreen;
-  width: 200px;
-  height: 50px;
-  border-radius: 5px;
-  position: absolute;
-  bottom: 20px;
+  width: 50px;
+  height: 36px;
+  border-radius: 4px;
 }
 
-.dialogSubmit:hover {
+.diologBtn:hover {
   color: white;
   background-color: goldenrod;
 }
 
 header {
-  width: 1440px;
+  min-width: 1260px;
   background-color: gray;
   margin-bottom: 20px;
 }
@@ -303,7 +344,6 @@ header {
 
 .table {
   margin-bottom: 30px;
-  text-align: center;
 }
 
 .tableHeader {
@@ -328,7 +368,7 @@ header {
   width: 150px;
   display: flex;
   flex-direction: row;
-  padding: 15px;
+  padding: 15px 10px;
 }
 
 div .checkBox {

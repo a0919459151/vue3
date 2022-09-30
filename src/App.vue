@@ -2,7 +2,13 @@
 import axios from "axios"
 import { ref } from "vue";
 
+import envConfig from '../env.config.js'
+
+const env = import.meta.env.VITE_NODE_ENV
+
 const stockData = ref([])  // for caching response object
+
+console.log(111,process.env.NODE_ENV)
 
 // input
 const stock = ref('')
@@ -13,6 +19,7 @@ const addStockDialogVisible = ref(false)
 const tableHeaderArray = ref(["股價", "漲跌", "漲跌幅(%)", "委買價", "委賣價", "開盤", "昨收", "最高", "最低", "成交量(張)", "更新時間"])
 const alertString = ref('')
 
+
 // temp add to stockSymbolArray & call api
 const submitstockSymbolArray = async () => {
   const result = stockTemp.value.map((element => element.stockSymbol))
@@ -20,7 +27,7 @@ const submitstockSymbolArray = async () => {
   stockTemp.value = []
 
   const res = await Promise.all(
-    stockSymbolArray.value.map((element) => axios.get(`http://localhost:3000/stockData/${element}`))
+    stockSymbolArray.value.map((element) => axios.get(`${envConfig[env].apiUrl}stockData/${element}`))
   )
   const resData = res.map((element) => element.data)
   stockData.value = resData

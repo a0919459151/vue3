@@ -5,10 +5,8 @@ import { ref } from "vue";
 import envConfig from '../env.config.js'
 
 const env = import.meta.env.VITE_NODE_ENV
-
+const apiUrlSpider = envConfig[env].apiUrl
 const stockData = ref([])  // for caching response object
-
-console.log(111,process.env.NODE_ENV)
 
 // input
 const stock = ref('')
@@ -27,7 +25,7 @@ const submitstockSymbolArray = async () => {
   stockTemp.value = []
 
   const res = await Promise.all(
-    stockSymbolArray.value.map((element) => axios.get(`${envConfig[env].apiUrl}stockData/${element}`))
+    stockSymbolArray.value.map((element) => axios.get(`${apiUrlSpider}stockData/${element}`))
   )
   const resData = res.map((element) => element.data)
   stockData.value = resData
@@ -72,10 +70,10 @@ const addStockToTemp = async () => {
     return stockSymbolArray.value.includes(stock.value) || resTemp.includes(stock.value)
   }
   async function getstockSymbolByStockName() {
-    return await axios.get(`http://localhost:3000/getOneBystockName/${stock.value}`)
+    return await axios.get(`${apiUrlSpider}getOneBystockName/${stock.value}`)
   }
   async function getstockNameByStockSymbol() {
-    return await axios.get(`http://localhost:3000/getOneByStockSymbol/${stock.value.toUpperCase()}`)
+    return await axios.get(`${apiUrlSpider}${stock.value.toUpperCase()}`)
   }
 }
 

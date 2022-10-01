@@ -73,7 +73,7 @@ const addStockToTemp = async () => {
     return await axios.get(`${apiUrlSpider}getOneBystockName/${stock.value}`)
   }
   async function getstockNameByStockSymbol() {
-    return await axios.get(`${apiUrlSpider}${stock.value.toUpperCase()}`)
+    return await axios.get(`${apiUrlSpider}getOneBystockSymbol/${stock.value.toUpperCase()}`)
   }
 }
 
